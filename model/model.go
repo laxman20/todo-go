@@ -78,11 +78,9 @@ func (m *Model) toggle() {
 func (m *Model) addTodo(text string) {
 	todos := m.todos
 	if m.state == ADD {
-		newTodos := make([]todo.Todo, 0, len(todos)+1)
-		newTodos = append(newTodos, todos[:m.insertPos]...)
-		newTodos = append(newTodos, todo.NewTodo(text))
-		newTodos = append(newTodos, todos[m.insertPos:]...)
-		m.todos = newTodos
+		m.todos = append(m.todos, todo.Todo{})
+		copy(m.todos[m.insertPos+1:], m.todos[m.insertPos:])
+		m.todos[m.insertPos] = todo.NewTodo(text)
 	} else if m.state == EDIT {
 		todos[m.cursor].Text = text
 	}
@@ -94,6 +92,12 @@ func (m *Model) removeTodo() {
 	}
 	idx := m.cursor
 	m.todos = append(m.todos[:idx], m.todos[idx+1:]...)
+	if m.cursor > len(m.todos)-1 {
+		m.cursor = len(m.todos) - 1
+	}
+	if m.cursor < 0 {
+		m.cursor = 0
+	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -158,7 +162,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.toggle()
 				return m, nil
 			case "o":
-				m.insertPos = m.cursor + 1
+				m.insertPos = min(m.cursor+1, len(m.todos))
 				m.gotoAdd()
 				return m, nil
 			case "O":
@@ -230,4 +234,11 @@ func (m Model) View() string {
 		s += m.textInput.View()
 	}
 	return s
+}
+
+func min(a int, b int) int {
+	if a > b {
+		return b
+	}
+	return a
 }
