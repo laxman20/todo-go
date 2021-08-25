@@ -1,4 +1,4 @@
-module todo
+module github.com/laxman20/todo-go
 
 go 1.17
 
