@@ -12,7 +12,7 @@ type state int
 
 const (
 	NORMAL state = iota
-	APPEND
+	ADD
 	EDIT
 )
 
@@ -20,6 +20,7 @@ type Model struct {
 	state     state
 	todos     []todo.Todo
 	cursor    int
+	insertPos int
 	textInput textinput.Model
 	err       error
 }
@@ -40,7 +41,7 @@ func (m *Model) down() {
 }
 
 func (m *Model) gotoAdd() {
-	m.state = APPEND
+	m.state = ADD
 	m.textInput.Focus()
 }
 
@@ -61,10 +62,15 @@ func (m *Model) toggle() {
 }
 
 func (m *Model) addTodo(text string) {
-	if m.state == APPEND {
-		m.todos = append(m.todos, todo.NewTodo(text))
+	todos := m.todos
+	if m.state == ADD {
+		newTodos := make([]todo.Todo, 0, len(todos)+1)
+		newTodos = append(newTodos, todos[:m.insertPos]...)
+		newTodos = append(newTodos, todo.NewTodo(text))
+		newTodos = append(newTodos, todos[m.insertPos:]...)
+		m.todos = newTodos
 	} else if m.state == EDIT {
-		m.todos[m.cursor].Text = text
+		todos[m.cursor].Text = text
 	}
 }
 
@@ -131,7 +137,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case " ":
 				m.toggle()
 				return m, nil
+			case "o":
+				m.insertPos = m.cursor + 1
+				m.gotoAdd()
+				return m, nil
+			case "O":
+				m.insertPos = m.cursor
+				m.gotoAdd()
+				return m, nil
 			case "A":
+				m.insertPos = len(m.todos)
 				m.gotoAdd()
 				return m, nil
 			case "i":
@@ -146,7 +161,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.state == APPEND || m.state == EDIT {
+	if m.state == ADD || m.state == EDIT {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.Type {
@@ -178,6 +193,9 @@ func (m Model) View() string {
 		s += "  No todos!\n"
 	}
 	for i, todo := range m.todos {
+		if m.state == ADD && m.insertPos == i {
+			s += m.textInput.View() + "\n"
+		}
 		if m.state == EDIT && m.cursor == i {
 			s += m.textInput.View() + "\n"
 		} else {
@@ -188,7 +206,7 @@ func (m Model) View() string {
 			s += fmt.Sprintf("  %s %s\n", cursorTxt, todo)
 		}
 	}
-	if m.state == APPEND {
+	if m.state == ADD && m.insertPos == len(m.todos) {
 		s += m.textInput.View()
 	}
 	return s
