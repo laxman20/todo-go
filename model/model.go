@@ -40,6 +40,20 @@ func (m *Model) down() {
 	}
 }
 
+func (m *Model) swapAbove() {
+	if m.cursor > 0 {
+		m.todos[m.cursor], m.todos[m.cursor-1] = m.todos[m.cursor-1], m.todos[m.cursor]
+		m.up()
+	}
+}
+
+func (m *Model) swapBelow() {
+	if m.cursor < len(m.todos)-1 {
+		m.todos[m.cursor], m.todos[m.cursor+1] = m.todos[m.cursor+1], m.todos[m.cursor]
+		m.down()
+	}
+}
+
 func (m *Model) gotoAdd() {
 	m.state = ADD
 	m.textInput.Focus()
@@ -131,8 +145,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "j":
 				m.down()
 				return m, nil
+			case "J":
+				m.swapBelow()
+				return m, nil
 			case "k":
 				m.up()
+				return m, nil
+			case "K":
+				m.swapAbove()
 				return m, nil
 			case " ":
 				m.toggle()
