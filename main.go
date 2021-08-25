@@ -36,10 +36,10 @@ func getDataFilePath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Could not load app data directory: %w\n", err)
 	}
-	if err = os.MkdirAll(filepath.Join(cacheDir, "todos"), os.ModePerm); err != nil {
-		return "", fmt.Errorf("Could not create todos directory: %w\n", err)
+	if err = os.MkdirAll(filepath.Join(cacheDir, "todo-go"), os.ModePerm); err != nil {
+		return "", fmt.Errorf("Could not create todo-go directory: %w\n", err)
 	}
-	dataFilePath := filepath.Join(cacheDir, "todos", "data.json")
+	dataFilePath := filepath.Join(cacheDir, "todo-go", "data.json")
 	return dataFilePath, nil
 }
 
