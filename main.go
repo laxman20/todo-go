@@ -91,6 +91,7 @@ type State int
 const (
 	NORMAL State = iota
 	APPEND
+	EDIT
 )
 
 type model struct {
@@ -121,6 +122,12 @@ func (m *model) gotoAdd() {
 	m.textInput.Focus()
 }
 
+func (m *model) goToEdit() {
+	m.state = EDIT
+	m.textInput.SetValue(m.todos[m.cursor].Text)
+	m.textInput.Focus()
+}
+
 func (m *model) gotoNormal() {
 	m.state = NORMAL
 	m.textInput.Blur()
@@ -132,7 +139,11 @@ func (m *model) toggle() {
 }
 
 func (m *model) addTodo(text string) {
-	m.todos = append(m.todos, makeTodo(text))
+	if m.state == APPEND {
+		m.todos = append(m.todos, makeTodo(text))
+	} else if m.state == EDIT {
+		m.todos[m.cursor].Text = text
+	}
 }
 
 func (m *model) removeTodo() {
@@ -184,6 +195,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "A":
 				m.gotoAdd()
 				return m, nil
+			case "i":
+				m.goToEdit()
+				return m, nil
 			case "D":
 				m.removeTodo()
 				return m, nil
@@ -193,7 +207,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.state == APPEND {
+	if m.state == APPEND || m.state == EDIT {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.Type {
@@ -225,11 +239,15 @@ func (m model) View() string {
 		s += "  No todos!\n"
 	}
 	for i, todo := range m.todos {
-		cursorTxt := " "
-		if m.cursor == i {
-			cursorTxt = "*"
+		if m.state == EDIT && m.cursor == i {
+			s += m.textInput.View() + "\n"
+		} else {
+			cursorTxt := " "
+			if m.cursor == i {
+				cursorTxt = "*"
+			}
+			s += fmt.Sprintf("  %s %s\n", cursorTxt, todo)
 		}
-		s += fmt.Sprintf("  %s %s\n", cursorTxt, todo)
 	}
 	if m.state == APPEND {
 		s += m.textInput.View()
