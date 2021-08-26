@@ -3,8 +3,9 @@ package todo
 import "fmt"
 
 type Todo struct {
-	Text string `json:"text"`
-	Done bool   `json:"done"`
+	Text  string `json:"text"`
+	Done  bool   `json:"done"`
+	Notes string `json:"notes"`
 }
 
 func NewTodo(text string) Todo {

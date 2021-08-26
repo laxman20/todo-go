@@ -2,11 +2,13 @@ package model
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/laxman20/todo-go/data"
 	"github.com/laxman20/todo-go/todo"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 type state int
@@ -15,6 +17,7 @@ const (
 	NORMAL state = iota
 	ADD
 	EDIT
+	NOTES
 )
 
 type Model struct {
@@ -63,6 +66,12 @@ func (m *Model) gotoAdd() {
 func (m *Model) goToEdit() {
 	m.state = EDIT
 	m.textInput.SetValue(m.todos[m.cursor].Text)
+	m.textInput.Focus()
+}
+
+func (m *Model) gotoNotes() {
+	m.state = NOTES
+	m.textInput.SetValue(wordwrap.String(m.todos[m.cursor].Notes, 80))
 	m.textInput.Focus()
 }
 
@@ -128,7 +137,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case todoLoadMsg:
 		m.todos = msg
 		ti := textinput.NewModel()
-		ti.Width = 80
 		m.textInput = ti
 		return m, nil
 	case todoSaveMsg:
@@ -180,6 +188,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "D":
 				m.removeTodo()
 				return m, nil
+			case "enter":
+				if len(m.todos) > 0 {
+					m.gotoNotes()
+				}
+				return m, nil
 			case "q":
 				return m, writeTodos(m)
 			}
@@ -202,19 +215,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		}
-		var cmd tea.Cmd
-		m.textInput, cmd = m.textInput.Update(msg)
-		return m, cmd
 	}
-	return m, nil
+
+	if m.state == NOTES {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEsc:
+				m.todos[m.cursor].Notes = m.textInput.Value()
+				m.gotoNormal()
+				return m, nil
+			}
+		}
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
 }
 
-func mainScreen(m *Model) string {
+func textInputView(m *Model) string {
+	return wordwrap.String(m.textInput.View()+"\n", 80)
+}
+
+func mainView(m *Model) string {
 	s := "Todos:\n"
 	if len(m.todos) == 0 {
 		s += "  No todos!\n"
 	}
-	editView := m.textInput.View() + "\n"
+	editView := textInputView(m)
 	for i, todo := range m.todos {
 		cursorTxt := " "
 		if m.cursor == i {
@@ -235,11 +264,28 @@ func mainScreen(m *Model) string {
 	return s
 }
 
+func notesView(m *Model) string {
+	todo := m.todos[m.cursor]
+	status := "(PENDING)"
+	if todo.Done {
+		status = "(DONE)"
+	}
+	br := strings.Repeat("=", 80)
+	header := fmt.Sprintf("%s %s\n%s", todo.Text, status, br)
+	return fmt.Sprintf("%s\nNotes:\n%s", header, textInputView(m))
+}
+
 func (m Model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("An error occurred: %v\n", m.err)
 	}
-	return mainScreen(&m)
+	switch m.state {
+	case NORMAL, EDIT, ADD:
+		return mainView(&m)
+	case NOTES:
+		return notesView(&m)
+	}
+	return "View not found"
 }
 
 func min(a int, b int) int {
