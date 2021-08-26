@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -9,6 +10,7 @@ import (
 	"github.com/laxman20/todo-go/data"
 	"github.com/laxman20/todo-go/todo"
 	"github.com/muesli/reflow/wordwrap"
+	"github.com/pkg/browser"
 )
 
 var encodedEnter = "¬"
@@ -33,6 +35,7 @@ type Model struct {
 
 type todoLoadMsg []todo.Todo
 type todoSaveMsg struct{}
+type urlOpened struct{}
 
 func (m *Model) up() {
 	if m.cursor > 0 {
@@ -111,6 +114,26 @@ func (m *Model) removeTodo() {
 	}
 	if m.cursor < 0 {
 		m.cursor = 0
+	}
+}
+
+func openTicket(todo *todo.Todo) tea.Cmd {
+	return func() tea.Msg {
+		if len(TicketUrl) == 0 || len(TicketPrefix) == 0 {
+			return nil
+		}
+		prefixes := strings.SplitN(TicketPrefix, ",", -1)
+		tickets := []string{}
+		for _, prefix := range prefixes {
+			r, _ := regexp.Compile(prefix + "-[0-9]+")
+			tickets = append(tickets, r.FindAllString(todo.Text, -1)...)
+			tickets = append(tickets, r.FindAllString(todo.Notes, -1)...)
+		}
+		if len(tickets) > 0 {
+			url := strings.Replace(TicketUrl, "{}", tickets[0], 1)
+			browser.OpenURL(url)
+		}
+		return urlOpened{}
 	}
 }
 
@@ -195,6 +218,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.todos) > 0 {
 					m.gotoNotes()
+				}
+				return m, nil
+			case "x":
+				if len(m.todos) > 0 {
+					return m, openTicket(&m.todos[m.cursor])
 				}
 				return m, nil
 			case "q":
