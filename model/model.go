@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/laxman20/todo-go/data"
@@ -127,7 +128,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case todoLoadMsg:
 		m.todos = msg
 		ti := textinput.NewModel()
-		ti.CharLimit = 100
+		ti.Width = 80
 		m.textInput = ti
 		return m, nil
 	case todoSaveMsg:
@@ -208,32 +209,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View() string {
-	if m.err != nil {
-		return fmt.Sprintf("An error occurred: %v\n", m.err)
-	}
+func mainScreen(m *Model) string {
 	s := "Todos:\n"
 	if len(m.todos) == 0 {
 		s += "  No todos!\n"
 	}
+	editView := m.textInput.View() + "\n"
 	for i, todo := range m.todos {
-		if m.state == ADD && m.insertPos == i {
-			s += m.textInput.View() + "\n"
+		cursorTxt := " "
+		if m.cursor == i {
+			cursorTxt = "*"
 		}
-		if m.state == EDIT && m.cursor == i {
-			s += m.textInput.View() + "\n"
+		todoView := fmt.Sprintf("  %s %s\n", cursorTxt, todo)
+		if m.state == ADD && m.insertPos == i {
+			s += editView + todoView
+		} else if m.state == EDIT && m.cursor == i {
+			s += editView
 		} else {
-			cursorTxt := " "
-			if m.cursor == i {
-				cursorTxt = "*"
-			}
-			s += fmt.Sprintf("  %s %s\n", cursorTxt, todo)
+			s += todoView
 		}
 	}
 	if m.state == ADD && m.insertPos == len(m.todos) {
-		s += m.textInput.View()
+		s += editView
 	}
 	return s
+}
+
+func (m Model) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("An error occurred: %v\n", m.err)
+	}
+	return mainScreen(&m)
 }
 
 func min(a int, b int) int {
