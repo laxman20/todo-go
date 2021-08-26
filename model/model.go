@@ -11,6 +11,8 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
+var encodedEnter = "¬"
+
 type state int
 
 const (
@@ -72,12 +74,14 @@ func (m *Model) goToEdit() {
 func (m *Model) gotoNotes() {
 	m.state = NOTES
 	m.textInput.SetValue(wordwrap.String(m.todos[m.cursor].Notes, 80))
+	m.textInput.Prompt = ""
 	m.textInput.Focus()
 }
 
 func (m *Model) gotoNormal() {
 	m.state = NORMAL
 	m.textInput.Blur()
+	m.textInput.Prompt = "> "
 	m.textInput.Reset()
 }
 
@@ -225,6 +229,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.todos[m.cursor].Notes = m.textInput.Value()
 				m.gotoNormal()
 				return m, nil
+			case tea.KeyEnter:
+				o := m.textInput.Value()
+				m.textInput.Reset()
+				m.textInput.SetValue(o + encodedEnter)
+				return m, nil
 			}
 		}
 	}
@@ -235,7 +244,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func textInputView(m *Model) string {
-	return wordwrap.String(m.textInput.View()+"\n", 80)
+	decoded := strings.Replace(m.textInput.View(), encodedEnter, "\n", -1)
+	return wordwrap.String(decoded+"\n", 80)
 }
 
 func mainView(m *Model) string {
