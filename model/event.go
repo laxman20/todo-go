@@ -56,7 +56,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.gotoAdd()
 				return m, nil
 			case "i":
-				m.goToEdit()
+				if len(m.todos) > 0 {
+					m.goToEdit()
+				}
 				return m, nil
 			case "D":
 				m.removeTodo()
